@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>City Tour</title>
+    <title>City TechTour</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <style>
-        /* --- 1. CSS GLOBAL --- */
+        /* GIỮ NGUYÊN GIAO DIỆN GLASS CŨ */
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
             --glass-bg: rgba(30, 30, 40, 0.5); 
             --glass-border: rgba(255, 255, 255, 0.15);
@@ -16,35 +15,25 @@
             --text-main: #ffffff;
             --text-sub: rgba(235, 235, 245, 0.65);
         }
-
-        body { 
-            overflow: hidden; font-family: 'Inter', sans-serif; 
-            background: #000; color: white; 
-        }
-        
+        body { overflow: hidden; font-family: 'Inter', sans-serif; background: #000; color: white; }
         #canvas-container { width: 100vw; height: 100vh; display: block; z-index: 1; }
-
-        /* --- 2. VISION OS UI PANEL --- */
+        
         #ui-layer {
             position: absolute; bottom: 50px; right: 50px;
             display: flex; flex-direction: column; gap: 20px;
-            width: fit-content; min-width: 320px; max-width: 400px;
-            
+            width: fit-content; min-width: 340px; max-width: 420px;
             background: var(--glass-bg);
             backdrop-filter: saturate(180%) blur(50px);
             -webkit-backdrop-filter: saturate(180%) blur(50px);
-            
             border: 1px solid var(--glass-border);
             border-radius: 32px; padding: 32px;
             box-shadow: 0 40px 100px rgba(0,0,0,0.6);
-            
             transform: translateY(30px) scale(0.95); opacity: 0;
             transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
             z-index: 10;
         }
         #ui-layer.visible { transform: translateY(0) scale(1); opacity: 1; }
-
-        /* Header */
+        
         #narrator-header { display: flex; align-items: center; gap: 12px; }
         #ai-orb {
             width: 20px; height: 20px; border-radius: 50%;
@@ -55,12 +44,8 @@
         }
         @keyframes breathe { 0%, 100% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.15); } }
         #narrator-name { font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; color: var(--text-sub); text-transform: uppercase; }
-
-        /* Content */
         #dialogue-text { font-size: 1.1rem; line-height: 1.6; color: var(--text-main); font-weight: 500; letter-spacing: -0.01em; }
         #choices-container { display: flex; flex-direction: column; gap: 12px; width: 100%; }
-
-        /* Buttons */
         .choice-btn {
             display: flex; align-items: center; justify-content: space-between;
             width: 100%; padding: 18px 24px;
@@ -73,34 +58,28 @@
         .choice-btn:hover { background: rgba(255, 255, 255, 0.15); transform: scale(1.02); }
         .choice-btn::after { content: '→'; opacity: 0.4; transition: 0.2s; transform: translateX(-5px); }
         .choice-btn:hover::after { opacity: 1; transform: translateX(0); color: var(--accent-color); }
-
-        /* Status */
         #voice-status { font-size: 0.75rem; color: var(--text-sub); text-align: center; margin-top: 5px; opacity: 0.7; }
 
-        /* --- 3. LOADING SCREEN (Đã xóa Modal Key) --- */
+        /* LOADING */
         #loading-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
             background: #000; transition: opacity 0.8s;
         }
-        
         #start-tour-btn {
-            width: auto; padding: 18px 48px; 
-            background: var(--accent-color); color: white; border: none;
-            border-radius: 100px; font-weight: 700; cursor: pointer; transition: 0.2s;
-            display: none; /* Ẩn mặc định chờ tải xong */
+            width: auto; padding: 18px 48px; background: var(--accent-color); color: white; border: none;
+            border-radius: 100px; font-weight: 700; cursor: pointer; transition: 0.2s; display: none;
         }
         #start-tour-btn:hover { filter: brightness(1.1); transform: scale(1.03); }
-        
         #loading-msg { color: #888; font-size: 0.9rem; margin-top: 10px; font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div id="loading-screen">
-        <div id="loading-text" style="color:#fff; letter-spacing:4px; font-size:1.2rem; font-weight:bold;">LOADING CITY...</div>
+        <div id="loading-text" style="color:#fff; letter-spacing:4px; font-size:1.2rem; font-weight:bold;">BUILDING 4 CITIES...</div>
         <div id="loading-msg">Initializing...</div>
-        <button id="start-tour-btn">START TOUR</button>
+        <button id="start-tour-btn">START WORLD TOUR</button>
     </div>
 
     <div id="ui-layer">
@@ -121,58 +100,86 @@
         import { RGBELoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/RGBELoader.js';
         import { DRACOLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/DRACOLoader.js';
         import gsap from 'https://cdn.skypack.dev/gsap@3.10.4';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
 
-        // --- CẤU HÌNH TOUR ---
+        // --- CẤU HÌNH HÀNH TRÌNH 4 THÀNH PHỐ ---
         const tourData = {
-            start: {
-                text: "Welcome to the City. I am your AI guide. Let's explore the urban architecture.",
+            // --- CITY 1 (PACK 1) - TỌA ĐỘ 0 ---
+            city1_start: {
+                text: "Welcome to District 1: The Origin City. This is where our journey begins.",
                 position: { x: 50, y: 30, z: 50 }, lookAt: { x: 0, y: 0, z: 0 }, 
-                choices: [ { label: "Go to Street Level", target: "street" }, { label: "View Tower", target: "tower" } ]
+                choices: [ 
+                    { label: "Fly to District 2 (Pack 3)", target: "city2_start" }, // Bay sang thành phố 2
+                    { label: "Explore Streets", target: "city1_street" }
+                ]
             },
-            street: {
-                text: "We are now at street level. Notice the layout of the roads.",
+            city1_street: {
+                text: "We are at the street level of District 1.",
                 position: { x: 0, y: 2, z: 10 }, lookAt: { x: 0, y: 2, z: -20 },
-                choices: [ { label: "Go to Tower", target: "tower" }, { label: "Back to Overview", target: "start" } ]
+                choices: [ { label: "Back to Sky", target: "city1_start" } ]
             },
-            tower: {
-                text: "Here is the main skyscraper of the district.",
-                position: { x: -20, y: 20, z: -20 }, lookAt: { x: 0, y: 10, z: 0 },
-                choices: [ { label: "Return to Street", target: "street" }, { label: "Back to Overview", target: "start" } ]
+
+            // --- CITY 2 (PACK 3) - TỌA ĐỘ 500 ---
+            city2_start: {
+                text: "Arriving at District 2: The Industrial Hub. Notice the different architecture style.",
+                position: { x: 550, y: 30, z: 50 }, lookAt: { x: 500, y: 0, z: 0 },
+                choices: [ 
+                    { label: "Fly to District 3 (Pack 5)", target: "city3_start" }, // Bay tiếp
+                    { label: "Go back to District 1", target: "city1_start" }
+                ]
+            },
+
+            // --- CITY 3 (PACK 5) - TỌA ĐỘ 1000 ---
+            city3_start: {
+                text: "Welcome to District 3: The Financial Center. This area is dense with skyscrapers.",
+                position: { x: 1050, y: 30, z: 50 }, lookAt: { x: 1000, y: 0, z: 0 },
+                choices: [ 
+                    { label: "Fly to District 4 (Pack 7)", target: "city4_start" },
+                    { label: "Go back to District 2", target: "city2_start" }
+                ]
+            },
+
+            // --- CITY 4 (PACK 7) - TỌA ĐỘ 1500 ---
+            city4_start: {
+                text: "Final destination: District 4. The Future Zone.",
+                position: { x: 1550, y: 30, z: 50 }, lookAt: { x: 1500, y: 0, z: 0 },
+                choices: [ 
+                    { label: "Explore District 4", target: "city4_explore" },
+                    { label: "Return to Start", target: "city1_start" } // Bay một mạch về đầu
+                ]
+            },
+            city4_explore: {
+                text: "Enjoy the view of the Future Zone.",
+                position: { x: 1500, y: 5, z: 10 }, lookAt: { x: 1500, y: 5, z: -20 },
+                choices: [ { label: "Back to Sky", target: "city4_start" } ]
             }
         };
 
-        let currentAudio = null;
-        let controlsTarget = new THREE.Vector3(0,0,0);
-
-        // --- HÀM ĐỌC GIỌNG NÓI (HỆ THỐNG - KHÔNG CẦN KEY) ---
-        function playVoice(text) {
-            const statusEl = document.getElementById('voice-status');
-            
-            // Hủy giọng cũ
-            window.speechSynthesis.cancel();
-            
-            statusEl.innerText = "System Voice Speaking...";
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US'; // Tiếng Anh
-            utterance.rate = 1.0;     // Tốc độ chuẩn
-            utterance.pitch = 1.0;
-            
-            // Cố gắng chọn giọng Google hoặc giọng tốt nhất có sẵn
-            const voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(v => v.name.includes('Google US') || v.name.includes('Samantha') || v.name.includes('Zira'));
-            if(preferredVoice) utterance.voice = preferredVoice;
-
-            utterance.onend = () => {
-                statusEl.innerText = "";
-            };
-
-            window.speechSynthesis.speak(utterance);
+        // --- HÀM LOAD MODEL TỔNG QUÁT ---
+        function loadCityModel(filename, x_offset) {
+            gltfLoader.load(filename, (gltf) => {
+                const model = gltf.scene;
+                // Đặt vị trí X theo tham số truyền vào
+                model.position.set(x_offset, 0, 0); 
+                model.scale.set(1, 1, 1);
+                scene.add(model);
+                
+                // Lưu animation
+                if(gltf.animations.length > 0) {
+                    const mixer = new THREE.AnimationMixer(model);
+                    gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+                    mixers.push(mixer);
+                }
+                console.log(`Loaded ${filename} at x=${x_offset}`);
+            }, 
+            undefined, 
+            (error) => console.error(`Error loading ${filename}:`, error));
         }
 
-        // --- THREE.JS SETUP ---
+        // --- SETUP SCENE ---
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 2000); 
+        // Tầm nhìn cực xa (10000) để thấy hết 4 thành phố
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 10000); 
         camera.position.set(50, 30, 50);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -180,55 +187,64 @@
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.getElementById('canvas-container').appendChild(renderer.domElement);
+        
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
 
-        // Loading Manager
+        // --- LOADERS ---
         const manager = new THREE.LoadingManager();
         manager.onLoad = () => {
-            console.log("ALL ASSETS LOADED");
-            document.getElementById('loading-text').innerText = "";
-            document.getElementById('loading-msg').style.display = "none";
-            document.getElementById('start-tour-btn').style.display = 'block';
+            console.log("WORLD COMPLETE");
+            document.getElementById('loading-screen').style.opacity = 0;
+            setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 1000);
+            document.getElementById('ui-layer').classList.add('visible');
+            
+            // Kích hoạt âm thanh
+            window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); 
+            animate(); 
+            moveTo('city1_start');
         };
-        manager.onError = (url) => {
-            console.error("Error loading:", url);
-            document.getElementById('loading-msg').innerText = "ERROR: Could not load " + url;
-            document.getElementById('loading-msg').style.color = "red";
+        
+        // Tính % tải của tổng các file
+        manager.onProgress = (url, loaded, total) => {
+            const percent = Math.round((loaded / total) * 100);
+            document.getElementById('loading-msg').innerText = `Loading Asset ${loaded}/${total} (${percent}%)`;
         };
 
         const rgbeLoader = new RGBELoader(manager);
         rgbeLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/equirectangular/royal_esplanade_1k.hdr', (texture) => {
             texture.mapping = THREE.EquirectangularReflectionMapping;
-            scene.background = texture; scene.environment = texture; scene.backgroundBlurriness = 0.5;
+            scene.background = texture; scene.environment = texture;
         });
 
-        // ▼▼▼ LOAD CITY MODEL ▼▼▼
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
-        dracoLoader.setDecoderConfig({ type: 'js' }); 
-
         const gltfLoader = new GLTFLoader(manager);
-        gltfLoader.setDRACOLoader(dracoLoader); 
+        gltfLoader.setDRACOLoader(dracoLoader);
 
-        // Tải File City
-        gltfLoader.load('city_pack_5.glb', (gltf) => {
-            const model = gltf.scene;
-            model.scale.set(1, 1, 1); 
-            model.position.set(0, 0, 0);
-            scene.add(model);
-            
-            if(gltf.animations.length > 0) {
-                mixer = new THREE.AnimationMixer(model);
-                gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
-            }
-        }, 
-        (xhr) => { 
-            if (xhr.lengthComputable) {
-                const percent = Math.round((xhr.loaded / xhr.total) * 100);
-                document.getElementById('loading-msg').innerText = `Downloading Model: ${percent}%`;
-            }
-        });
+        // --- ▼▼▼ LOAD 4 THÀNH PHỐ ▼▼▼ ---
+        const mixers = []; 
+        
+        // Cách nhau 500 đơn vị
+        loadCityModel('city_pack_1.glb', 0);    // City 1
+        loadCityModel('city_pack_3.glb', 500);  // City 2
+        loadCityModel('city_pack_5.glb', 1000); // City 3
+        loadCityModel('city_pack_7.glb', 1500); // City 4
 
-        // --- UPDATE UI & ANIMATION ---
+        // --- UI LOGIC ---
+        let currentAudio = null;
+        let controlsTarget = new THREE.Vector3(0,0,0);
+
+        function playVoice(text) {
+            const statusEl = document.getElementById('voice-status');
+            window.speechSynthesis.cancel();
+            statusEl.innerText = "Guide Speaking...";
+            const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; 
+            u.onend = () => statusEl.innerText = "";
+            window.speechSynthesis.speak(u);
+        }
+
         function updateUI(key) {
             const data = tourData[key];
             const textEl = document.getElementById('dialogue-text');
@@ -253,30 +269,36 @@
 
         function moveTo(key) {
             const target = tourData[key];
-            gsap.to(camera.position, { x: target.position.x, y: target.position.y, z: target.position.z, duration: 2.5, ease: "power3.inOut" });
-            gsap.to(controlsTarget, { x: target.lookAt.x, y: target.lookAt.y, z: target.lookAt.z, duration: 2.5, ease: "power3.inOut", onUpdate: () => camera.lookAt(controlsTarget) });
+            
+            // Bay Camera
+            gsap.to(camera.position, { 
+                x: target.position.x, y: target.position.y, z: target.position.z, 
+                duration: 4, // Bay chậm hơn chút vì quãng đường xa
+                ease: "power2.inOut" 
+            });
+            
+            // Xoay Camera
+            gsap.to(controlsTarget, { 
+                x: target.lookAt.x, y: target.lookAt.y, z: target.lookAt.z, 
+                duration: 4, 
+                ease: "power2.inOut", 
+                onUpdate: () => {
+                    camera.lookAt(controlsTarget);
+                    controls.target.copy(controlsTarget);
+                } 
+            });
+            
             updateUI(key);
         }
 
-        let mixer; const clock = new THREE.Clock();
+        const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
-            if(mixer) mixer.update(clock.getDelta());
-            camera.lookAt(controlsTarget);
+            const delta = clock.getDelta();
+            mixers.forEach(mixer => mixer.update(delta));
+            controls.update();
             renderer.render(scene, camera);
         }
-
-        // START BUTTON
-        document.getElementById('start-tour-btn').onclick = () => {
-            document.getElementById('loading-screen').style.opacity = 0;
-            setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 1000);
-            document.getElementById('ui-layer').classList.add('visible');
-            
-            // Kích hoạt giọng nói lần đầu (hack để trình duyệt cho phép)
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
-            
-            animate(); moveTo('start');
-        };
 
         window.onresize = () => {
             camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
