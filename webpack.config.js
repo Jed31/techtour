@@ -1,10 +1,10 @@
 const path = require('path');
 
-const src = path.resolve(__dirname, 'src');
+const root = path.resolve(__dirname, '.');
 
 module.exports = {
   mode: 'development',
-  entry: './src/index.ts',
+  entry: './index.ts',
   devtool: 'inline-source-map',
   module: {
     rules: [
@@ -20,9 +20,9 @@ module.exports = {
   },
   output: {
     filename: 'index.js',
-    path: src
+    path: root
   },
   devServer: {
-    static: src,
+    static: root,
   },
 }
