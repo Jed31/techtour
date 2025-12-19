@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>City TechTour</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        /* GIỮ NGUYÊN GIAO DIỆN GLASS CŨ */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --glass-bg: rgba(30, 30, 40, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --accent-color: #0A84FF;
+            --text-main: #ffffff;
+            --text-sub: rgba(235, 235, 245, 0.65);
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: #000;
+            color: white;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 2;
+        }
+
+        #ui-layer {
+            position: absolute;
+            bottom: 50px;
+            right: 50px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: fit-content;
+            min-width: 340px;
+            max-width: 420px;
+            max-height: 80vh;
+            /* Limit height */
+            background: var(--glass-bg);
+            backdrop-filter: saturate(180%) blur(50px);
+            -webkit-backdrop-filter: saturate(180%) blur(50px);
+            border: 1px solid var(--glass-border);
+            border-radius: 32px;
+            padding: 32px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+            transform: translateY(30px) scale(0.95);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 20;
+        }
+
+        #ui-layer.visible {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        #narrator-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        #ai-orb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
+            box-shadow: 0 0 15px var(--accent-color);
+            animation: breathe 3s infinite ease-in-out;
+            flex-shrink: 0;
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.15);
+            }
+        }
+
+        #narrator-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-sub);
+            text-transform: uppercase;
+        }
+
+        #dialogue-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            flex-shrink: 0;
+        }
+
+        #choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            overflow-y: auto;
+            padding-right: 5px;
+            /* Scrollable */
+        }
+
+        /* Scrollbar styling */
+        #choices-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #choices-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .choice-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 18px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .choice-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(1.02);
+        }
+
+        .choice-btn::after {
+            content: '→';
+            opacity: 0.4;
+            transition: 0.2s;
+            transform: translateX(-5px);
+        }
+
+        .choice-btn:hover::after {
+            opacity: 1;
+            transform: translateX(0);
+            color: var(--accent-color);
+        }
+
+        #voice-status {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            text-align: center;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
+
+        /* LOADING */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 19998;
+            background: #000;
+            transition: opacity 0.8s;
+        }
+
+        #start-tour-btn {
+            width: auto;
+            padding: 18px 48px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 100px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: none;
+        }
+
+        #start-tour-btn:hover {
+            filter: brightness(1.1);
+            transform: scale(1.03);
+        }
+
+        #loading-msg {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loading-screen">
+        <div id="loading-text" style="color:#fff; letter-spacing:4px; font-size:1.2rem; font-weight:bold;">BUILDING 4
+            CITIES...</div>
+        <div id="loading-msg">Initializing...</div>
+        <button id="start-tour-btn">START WORLD TOUR</button>
+    </div>
+
+    <div id="ui-layer">
+        <div id="narrator-header">
+            <div id="ai-orb"></div>
+            <div id="narrator-name">AI Guide</div>
+        </div>
+        <div id="dialogue-text">...</div>
+        <div id="choices-container"></div>
+        <div id="voice-status"></div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+        import { RGBELoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/RGBELoader.js';
+        import { DRACOLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/DRACOLoader.js';
+        import gsap from 'https://cdn.skypack.dev/gsap@3.10.4';
+        import { OrbitControls } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/controls/OrbitControls.js';
+
+        // --- CẤU HÌNH HÀNH TRÌNH 4 THÀNH PHỐ ---
+        const tourData = {
+            // ==================================================================================
+            // CITY 1: LOWER MANHATTAN (The Origin)
+            // ==================================================================================
+            city1_start: {
+                text: "Welcome to Lower Manhattan. Where it all began. The financial engine of the world beats here.",
+                position: { x: 70, y: 15, z: 35 }, lookAt: { x: 0, y: 5, z: 0 },
+                choices: [
+                    { label: "1. Aerial Overview", target: "city1_1" },
+                    { label: "2. Street Level", target: "city1_2" },
+                    { label: "3. Harbor View", target: "city1_3" },
+                    { label: "4. Wall Street Bull", target: "city1_4" },
+                    { label: "5. One World Trade", target: "city1_5" },
+                    { label: "6. The Oculus", target: "city1_6" },
+                    { label: "7. Battery Park", target: "city1_7" },
+                    { label: "8. Seaport District", target: "city1_8" },
+                    { label: "9. Bridge Entrance", target: "city1_9" },
+                    { label: "10. Nightfall", target: "city1_10" },
+                    { label: ">>> Cross to Brooklyn", target: "city2_start" }
+                ]
+            },
+            city1_1: { text: "From above, the grid is a canyon of steel.", position: { x: 0, y: 80, z: 0 }, lookAt: { x: 0, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_2: { text: "Walking the cobblestones of history.", position: { x: -10, y: 2, z: 8 }, lookAt: { x: 20, y: 4, z: -10 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_3: { text: "The view from the harbor welcomes the world.", position: { x: -80, y: 5, z: 40 }, lookAt: { x: 0, y: 10, z: 0 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_4: { text: "The symbol of market optimism stands strong.", position: { x: 20, y: 2, z: 10 }, lookAt: { x: 24, y: 3, z: 12 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_5: { text: "Looking up at the Freedom Tower.", position: { x: -40, y: 2, z: -20 }, lookAt: { x: -40, y: 100, z: -20 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_6: { text: "Architectural marvel of the transit hub.", position: { x: -30, y: 10, z: -15 }, lookAt: { x: -50, y: 5, z: -25 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_7: { text: "Greenery amidst the concrete jungle.", position: { x: 60, y: 5, z: 30 }, lookAt: { x: 0, y: 10, z: 0 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_8: { text: "Old maritime history preserved.", position: { x: 80, y: 5, z: -20 }, lookAt: { x: 40, y: 5, z: 0 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_9: { text: "The gateway to the boroughs.", position: { x: 50, y: 15, z: 25 }, lookAt: { x: 80, y: 15, z: 40 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+            city1_10: { text: "The city that never sleeps, waking up.", position: { x: 0, y: 40, z: 60 }, lookAt: { x: 0, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city1_start" }] },
+
+            // ==================================================================================
+            // CITY 2: BROOKLYN / DUMBO (The Industrial Hub)
+            // ==================================================================================
+            city2_start: {
+                text: "Brooklyn. Where industry meets art. The creative soul of the city.",
+                position: { x: 580, y: 25, z: 40 }, lookAt: { x: 500, y: 10, z: 0 },
+                choices: [
+                    { label: "1. Rooftop View", target: "city2_1" },
+                    { label: "2. Under the Bridge", target: "city2_2" },
+                    { label: "3. Warehouse St.", target: "city2_3" },
+                    { label: "4. Park View", target: "city2_4" },
+                    { label: "5. Carousel", target: "city2_5" },
+                    { label: "6. Skyline Face", target: "city2_6" },
+                    { label: "7. Tech Hub", target: "city2_7" },
+                    { label: "8. Coffee Shop", target: "city2_8" },
+                    { label: "9. Ferry Landing", target: "city2_9" },
+                    { label: "10. Sunset", target: "city2_10" },
+                    { label: ">>> Head to Midtown", target: "city3_start" },
+                    { label: "<<< Back to Manhattan", target: "city1_start" }
+                ]
+            },
+            city2_1: { text: "Rooftops stretch to the horizon.", position: { x: 500, y: 60, z: 0 }, lookAt: { x: 500, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_2: { text: "The massive steel of the bridge overhead.", position: { x: 460, y: 2, z: 20 }, lookAt: { x: 500, y: 20, z: -10 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_3: { text: "Cobblestone streets of DUMBO.", position: { x: 520, y: 2, z: 10 }, lookAt: { x: 520, y: 2, z: -20 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_4: { text: "Green grass with a view of the city.", position: { x: 560, y: 5, z: 30 }, lookAt: { x: 500, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_5: { text: "Jane's Carousel, a jewel by the water.", position: { x: 540, y: 5, z: 40 }, lookAt: { x: 540, y: 5, z: 50 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_6: { text: "Looking back at the Manhattan skyline.", position: { x: 600, y: 15, z: 0 }, lookAt: { x: 0, y: 15, z: 0 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_7: { text: "New offices in old factories.", position: { x: 480, y: 10, z: -10 }, lookAt: { x: 460, y: 10, z: -20 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_8: { text: "The aroma of roasted coffee fills the air.", position: { x: 510, y: 2, z: 5 }, lookAt: { x: 510, y: 2, z: 10 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_9: { text: "Commuting by water.", position: { x: 620, y: 3, z: 50 }, lookAt: { x: 500, y: 10, z: 0 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+            city2_10: { text: "Golden hour hits the bricks.", position: { x: 700, y: 40, z: 40 }, lookAt: { x: 500, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city2_start" }] },
+
+            // ==================================================================================
+            // CITY 3: MIDTOWN MANHATTAN (The Skyline)
+            // ==================================================================================
+            city3_start: {
+                text: "Midtown. The heart of the concrete jungle. Giants walk here.",
+                position: { x: 1060, y: 50, z: 60 }, lookAt: { x: 1000, y: 0, z: 0 },
+                choices: [
+                    { label: "1. Skyscraper Top", target: "city3_1" },
+                    { label: "2. Park Avenue", target: "city3_2" },
+                    { label: "3. Times Square", target: "city3_3" },
+                    { label: "4. Central Park", target: "city3_4" },
+                    { label: "5. Library", target: "city3_5" },
+                    { label: "6. Grand Central", target: "city3_6" },
+                    { label: "7. 5th Avenue", target: "city3_7" },
+                    { label: "8. Broadway", target: "city3_8" },
+                    { label: "9. Bryant Park", target: "city3_9" },
+                    { label: "10. Top of Rock", target: "city3_10" },
+                    { label: ">>> To Hudson Yards", target: "city4_start" },
+                    { label: "<<< Back to Brooklyn", target: "city2_start" }
+                ]
+            },
+            city3_1: { text: "Vertigo induced views from the top.", position: { x: 1000, y: 150, z: 10 }, lookAt: { x: 1000, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_2: { text: "The canyon of corporate power.", position: { x: 1000, y: 5, z: 80 }, lookAt: { x: 1000, y: 20, z: -50 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_3: { text: "The crossroads of the world.", position: { x: 900, y: 5, z: 0 }, lookAt: { x: 1000, y: 20, z: 0 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_4: { text: "Nature meets grandeur.", position: { x: 1100, y: 30, z: -50 }, lookAt: { x: 1000, y: 10, z: 0 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_5: { text: "Quiet knowledge amidst the noise.", position: { x: 1020, y: 5, z: 20 }, lookAt: { x: 1040, y: 10, z: 20 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_6: { text: "The rush of commuters.", position: { x: 1040, y: 5, z: 30 }, lookAt: { x: 1040, y: 20, z: 30 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_7: { text: "Luxury shopping and historic sights.", position: { x: 980, y: 5, z: 40 }, lookAt: { x: 980, y: 5, z: -40 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_8: { text: "The bright lights of theatre.", position: { x: 920, y: 5, z: 10 }, lookAt: { x: 920, y: 20, z: -10 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_9: { text: "A lunch break oasis.", position: { x: 1020, y: 10, z: 15 }, lookAt: { x: 1020, y: 0, z: 15 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+            city3_10: { text: "The best panoramic view.", position: { x: 1000, y: 140, z: -20 }, lookAt: { x: 1000, y: 0, z: 50 }, choices: [{ label: "Back to Menu", target: "city3_start" }] },
+
+            // ==================================================================================
+            // CITY 4: HUDSON YARDS (The Future)
+            // ==================================================================================
+            city4_start: {
+                text: "Hudson Yards. The newest frontier. West side innovation.",
+                position: { x: 1580, y: 20, z: 40 }, lookAt: { x: 1500, y: 15, z: 0 },
+                choices: [
+                    { label: "1. The Edge", target: "city4_1" },
+                    { label: "2. The Vessel", target: "city4_2" },
+                    { label: "3. High Line End", target: "city4_3" },
+                    { label: "4. Shed Culture", target: "city4_4" },
+                    { label: "5. River View", target: "city4_5" },
+                    { label: "6. Glass Canyon", target: "city4_6" },
+                    { label: "7. Subway Entrance", target: "city4_7" },
+                    { label: "8. Plaza Level", target: "city4_8" },
+                    { label: "9. Drone View", target: "city4_9" },
+                    { label: "10. Future Shot", target: "city4_10" },
+                    { label: "<<< Restart Tour", target: "city1_start" }
+                ]
+            },
+            city4_1: { text: "Standing on the Edge. Do not look down.", position: { x: 1540, y: 100, z: 20 }, lookAt: { x: 1500, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_2: { text: "The honeycomb structure of the Vessel.", position: { x: 1500, y: 2, z: 15 }, lookAt: { x: 1500, y: 30, z: -10 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_3: { text: "Where nature meets specific rail.", position: { x: 1600, y: 10, z: 40 }, lookAt: { x: 1500, y: 10, z: 0 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_4: { text: "The Shed. A center for artistic invention.", position: { x: 1520, y: 5, z: 30 }, lookAt: { x: 1520, y: 15, z: 30 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_5: { text: "Looking out towards New Jersey.", position: { x: 1400, y: 10, z: 0 }, lookAt: { x: 1300, y: 10, z: 0 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_6: { text: "Surrounded by blue glass.", position: { x: 1500, y: 50, z: 0 }, lookAt: { x: 1540, y: 80, z: 20 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_7: { text: "The 7 Train extension.", position: { x: 1580, y: 2, z: 50 }, lookAt: { x: 1580, y: 2, z: 40 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_8: { text: "The public square and gardens.", position: { x: 1500, y: 2, z: 0 }, lookAt: { x: 1500, y: 20, z: -20 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_9: { text: "Hovering like a drone.", position: { x: 1500, y: 200, z: 0 }, lookAt: { x: 1500, y: 0, z: 0 }, choices: [{ label: "Back to Menu", target: "city4_start" }] },
+            city4_10: { text: "The future is now.", position: { x: 1700, y: 20, z: 20 }, lookAt: { x: 1500, y: 20, z: 0 }, choices: [{ label: "Back to Menu", target: "city4_start" }] }
+        };
+
+        // --- HÀM LOAD MODEL TỔNG QUÁT (Promise-based) ---
+        function loadCityModel(filename, x_offset, targetSize = null) {
+            return new Promise((resolve, reject) => {
+                gltfLoader.load(filename, (gltf) => {
+                    const model = gltf.scene;
+
+                    // Measure size
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = new THREE.Vector3();
+                    box.getSize(size);
+                    const maxDim = Math.max(size.x, size.y, size.z);
+
+                    let scale = 1;
+                    if (targetSize) {
+                        scale = targetSize / maxDim;
+                        model.scale.set(scale, scale, scale);
+                    }
+
+                    model.position.set(x_offset, 0, 0);
+                    scene.add(model);
+
+                    // Lưu animation
+                    if (gltf.animations.length > 0) {
+                        const mixer = new THREE.AnimationMixer(model);
+                        gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+                        mixers.push(mixer);
+                    }
+
+                    console.log(`Loaded ${filename}: OriginalSize=${maxDim.toFixed(2)}, Scale=${scale.toFixed(4)}, NewSize=${(maxDim * scale).toFixed(2)}`);
+                    resolve(maxDim);
+                },
+                    (xhr) => {
+                        // Progress handled by manager
+                    },
+                    (error) => {
+                        console.error(`Error loading ${filename}:`, error);
+                        reject(error);
+                    });
+            });
+        }
+
+        // --- SETUP SCENE ---
+        const scene = new THREE.Scene();
+        // Tầm nhìn cực xa (10000) để thấy hết 4 thành phố
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+        camera.position.set(50, 30, 50);
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Soft white light
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+        dirLight.position.set(100, 100, 50);
+        scene.add(dirLight);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // --- LOADERS ---
+        const manager = new THREE.LoadingManager();
+        // Manager progress is purely for UI text update
+        manager.onProgress = (url, loaded, total) => {
+            // Rough estimation because strict total varies with async calls
+            document.getElementById('loading-msg').innerText = `Loading Assets...`;
+        };
+
+        const rgbeLoader = new RGBELoader(manager);
+        rgbeLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/equirectangular/royal_esplanade_1k.hdr', (texture) => {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            scene.background = texture; scene.environment = texture;
+        });
+
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');
+        const gltfLoader = new GLTFLoader(manager);
+        gltfLoader.setDRACOLoader(dracoLoader);
+
+        // --- ▼▼▼ ASYNC LOAD WORLD ▼▼▼ ---
+        const mixers = [];
+
+        async function loadWorld() {
+            try {
+                // FIXED GRID CONFIGURATION
+                const SPACING = 500;
+                const MODEL_SIZE = 450; // Fits within 500 spacing with small gap
+
+                console.log(`Initializing World. Spacing: ${SPACING}, Target Size: ${MODEL_SIZE}`);
+
+                // Load all cities in parallel with fixed size and spacing
+                await Promise.all([
+                    loadCityModel('city_pack_1.glb', 0, MODEL_SIZE),
+                    loadCityModel('city_pack_3.glb', SPACING * 1, MODEL_SIZE),
+                    loadCityModel('city_pack_5.glb', SPACING * 2, MODEL_SIZE),
+                    loadCityModel('city_pack_7.glb', SPACING * 3, MODEL_SIZE)
+                ]);
+
+                // 3. Start Experience
+                console.log("WORLD COMPLETE");
+                document.getElementById('loading-screen').style.opacity = 0;
+                setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 1000);
+                document.getElementById('ui-layer').classList.add('visible');
+
+                // Kích hoạt âm thanh
+                window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+                animate();
+                moveTo('city1_start');
+
+            } catch (err) {
+                console.error("Critical Error Loading World:", err);
+                // document.getElementById('loading-msg').innerText = "Error Loading World. Check Console.";
+            }
+        }
+
+        loadWorld();
+
+        // --- UI LOGIC ---
+        let currentAudio = null;
+        let controlsTarget = new THREE.Vector3(0, 0, 0);
+
+        async function playVoice(text) {
+            const statusEl = document.getElementById('voice-status');
+
+            // Stop current audio if any
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            window.speechSynthesis.cancel();
+
+            statusEl.innerText = "Guide Speaking...";
+
+            const VOICE_ID = '21m00Tcm4TlvDq8ikWAM'; // Rachel
+            const API_KEY = 'ea12904d017b845b032437fc2b72280b2f319028377b712fbd0fbbc0db9843c2';
+
+            try {
+                const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
+                    method: 'POST',
+                    headers: {
+                        'xi-api-key': API_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        model_id: "eleven_monolingual_v1",
+                        voice_settings: {
+                            stability: 0.5,
+                            similarity_boost: 0.5
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error('API Error');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                currentAudio = new Audio(url);
+                currentAudio.onended = () => {
+                    statusEl.innerText = "";
+                    URL.revokeObjectURL(url);
+                };
+                currentAudio.play();
+
+            } catch (error) {
+                console.error("ElevenLabs Error:", error);
+                // Fallback
+                const u = new SpeechSynthesisUtterance(text);
+                u.lang = 'en-US';
+                u.onend = () => statusEl.innerText = "";
+                window.speechSynthesis.speak(u);
+            }
+        }
+
+        function updateUI(key) {
+            const data = tourData[key];
+            const textEl = document.getElementById('dialogue-text');
+            const choicesEl = document.getElementById('choices-container');
+
+            textEl.style.opacity = 0; textEl.style.transform = "translateY(5px)";
+            setTimeout(() => {
+                textEl.innerText = data.text;
+                textEl.style.opacity = 1; textEl.style.transform = "translateY(0)";
+                textEl.style.transition = "all 0.5s ease";
+                playVoice(data.text);
+            }, 300);
+
+            choicesEl.innerHTML = '';
+            data.choices.forEach(c => {
+                const btn = document.createElement('div');
+                btn.className = 'choice-btn'; btn.innerText = c.label;
+                btn.onclick = () => moveTo(c.target);
+                choicesEl.appendChild(btn);
+            });
+        }
+
+        function moveTo(key) {
+            const target = tourData[key];
+
+            // Bay Camera
+            gsap.to(camera.position, {
+                x: target.position.x, y: target.position.y, z: target.position.z,
+                duration: 4, // Bay chậm hơn chút vì quãng đường xa
+                ease: "power2.inOut"
+            });
+
+            // Xoay Camera
+            gsap.to(controlsTarget, {
+                x: target.lookAt.x, y: target.lookAt.y, z: target.lookAt.z,
+                duration: 4,
+                ease: "power2.inOut",
+                onUpdate: () => {
+                    camera.lookAt(controlsTarget);
+                    controls.target.copy(controlsTarget);
+                }
+            });
+
+            updateUI(key);
+        }
+
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            mixers.forEach(mixer => mixer.update(delta));
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+
+</html>

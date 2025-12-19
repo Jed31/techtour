@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>City TechTour</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --glass-bg: rgba(30, 30, 40, 0.5);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --accent-color: #0A84FF;
+      --text-main: #ffffff;
+      --text-sub: rgba(235, 235, 245, 0.65);
+    }
+
+    body {
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      background: #000;
+      color: white;
+    }
+
+    #ui-layer {
+      position: absolute;
+      bottom: 50px;
+      right: 50px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: fit-content;
+      min-width: 340px;
+      max-width: 420px;
+      max-height: 80vh;
+      background: var(--glass-bg);
+      backdrop-filter: saturate(180%) blur(50px);
+      -webkit-backdrop-filter: saturate(180%) blur(50px);
+      border: 1px solid var(--glass-border);
+      border-radius: 32px;
+      padding: 32px;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+      transform: translateY(30px) scale(0.95);
+      opacity: 0;
+      transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 20;
+    }
+
+    #ui-layer.visible {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    #narrator-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    #ai-orb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb);
+      box-shadow: 0 0 15px var(--accent-color);
+      animation: breathe 3s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+
+    @keyframes breathe {
+
+      0%,
+      100% {
+        opacity: 0.8;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.15);
+      }
+    }
+
+    #narrator-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+    }
+
+    #dialogue-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: var(--text-main);
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      flex-shrink: 0;
+    }
+
+    #choices-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+
+    #choices-container::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #choices-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    .choice-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 18px 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .choice-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: scale(1.02);
+    }
+
+    .choice-btn::after {
+      content: '→';
+      opacity: 0.4;
+      transition: 0.2s;
+      transform: translateX(-5px);
+    }
+
+    .choice-btn:hover::after {
+      opacity: 1;
+      transform: translateX(0);
+      color: var(--accent-color);
+    }
+
+    #voice-status {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      text-align: center;
+      margin-top: 5px;
+      opacity: 0.7;
+    }
+
+    #start-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      transition: opacity 0.5s;
+    }
+
+    #start-btn {
+      padding: 15px 40px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: white;
+      background: var(--accent-color);
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(10, 132, 255, 0.5);
+      transition: transform 0.2s;
+    }
+
+    #start-btn:hover {
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="start-overlay">
+    <button id="start-btn">START EXPERIENCE</button>
+  </div>
+
+  <div id="ui-layer" class="visible">
+    <div id="narrator-header">
+      <div id="ai-orb"></div>
+      <div id="narrator-name">AI Guide</div>
+    </div>
+    <div id="dialogue-text">Welcome to the city. Where would you like to go?</div>
+    <div id="choices-container"></div>
+    <div id="voice-status"></div>
+  </div>
+
+  <script src="index.js"></script>
+</body>
+
+</html>
